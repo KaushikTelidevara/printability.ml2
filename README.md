@@ -1,130 +1,172 @@
-📦 Printability Prediction Model
+🧩 Predicting 3D Printability Using Generative Design & Machine Learning
 
-Machine-learning model to predict 3D print success probability (0–1) based on generative design features such as slenderness, base size, neck thickness, complexity, mass, overhang angle, and more.
+This project integrates generative design, 3D printing slicing data, and machine learning to predict the printability of parts produced using Bambu Lab printers.
 
-This project trains and evaluates a Random Forest Regressor using a dataset of 20+ generatively designed brackets created in Fusion 360.
-The goal is to build a tool that can estimate print success before manufacturing.
+The work forms part of a CAD/CAM assignment requiring:
 
-📁 Repository Structure
-📂 printability.ml
- ├── printability_model.ipynb   # Jupyter Notebook with ML model
- ├── printable.csv              # Dataset used for training
- └── README.md                  # Project documentation
+ Data collection from Generative Design (Fusion 360)
+ Slicer output from Bambu Studio
+ Printability labelling
+ A machine learning model predicting print success
+ A well-documented GitHub repository containing code, data, environment files, and instructions
 
-🧠 Project Overview
+🔍 1. Project Overview
 
-The dataset contains generative design outputs for 3D-printed brackets with variations in:
+3D printing success depends heavily on geometric features such as base size, slenderness, wall thickness, neck thickness, and overhang angles.
+To explore this relationship, we generated 20 variations of a bracket using Autodesk Fusion 360's Generative Design engine, varying:
 
-Base footprint
+ Safety factor
+ Minimum thickness
+ Overhang constraints
+ Unrestricted vs. manufacturing-aware settings
+ Base geometry
+ Neck thickness
+ Complexity
 
-Neck thickness
+Each design was sliced in Bambu Studio, which produced additional print-related features:
 
-Complexity
+ Support volume
+ Support mass
+ Print time
+ Material usage
 
-Slenderness ratio
+Finally, each design was assigned a print_success score (0–1) based on theoretical assessment of:
 
-Support mass / support volume
+ Small base stability
+ Thin neck failure risk
+ Complexity & overhang difficulty
 
-Overhang angle
+This dataset was used to train a Random Forest regressor that predicts printability.
 
-Material usage
+📁 2. Repository Structure
+printability.ml/
+│
+├── printable.csv                 # Full dataset
+├── printability_model.ipynb      # Jupyter Notebook (full workflow)
+├── src/
+│   ├── model_training.py         # Clean standalone ML script
+│
+├── environment.yml               # Conda environment for reproducibility
+├── .gitignore                    # Ignore cache files / ipynb checkpoints
+└── README.md                     # Project documentation
 
-Print time
-
-Safety factor / thickness
-
-Stress results (Von Mises)
-
-Each design is assigned a theoretical print success score between 0 and 1.
-
-The ML model learns how geometric + printability features influence success probability.
-
-📊 Machine Learning Model
-Model:
-
-✔ Random Forest Regressor
-✔ Train/test split: 80/20
-✔ Evaluation metrics: R², MAE
-
-Results:
-
-R² Score: ~0.85
-
-Mean Absolute Error: ~0.095
-
-This means the model explains 85% of the variance in print success — excellent for a small dataset.
-
-🔍 Feature Importance (Top Predictors)
-Feature	Importance
-small_base_flag	0.2206
-slenderness_ratio	0.1822
-max_von_mises_mpa	0.1457
-material_used_g	0.0744
-volume_mm3	0.0741
-mass_kg	0.0736
-thin_neck_flag	0.0724
-complexity_flag	0.0508
-
-These trends match engineering intuition:
-
-Small bases & slender shapes → unstable → lower success
-
-High stress values → weaker prints
-
-Complex geometry → harder to print
-
-More material → more consistent printing
-
-🧪 How to Run the Notebook
-1. Create a conda environment (optional)
-conda create -n printability_env python=3.10
+⚙️ 3. Installation
+✔ Option A — Using Conda (recommended)
+conda env create -f environment.yml
 conda activate printability_env
 
-2. Install dependencies
-pip install pandas numpy scikit-learn matplotlib
+✔ Option B — Manual Install
+pip install numpy pandas scikit-learn matplotlib jupyter seaborn
 
-3. Launch Jupyter Notebook
+🧪 4. Running the Machine Learning Model
+✔ Option A — Run the Notebook
+
+Open the Jupyter notebook:
 jupyter notebook
 
-4. Open the file
-
+Then open:
 printability_model.ipynb
 
-5. Run all cells
+✔ Option B — Run the Script Directly
+python src/model_training.py
 
-You will see:
+This will:
 
-Full dataset preview
+ Train the Random Forest model
+ Print model accuracy (R², MAE)
+ Save visualizations:
+  feature_importance.png
+  actual_vs_pred.png
 
-Cleaned and processed features
+📊 5. Dataset Description
 
-Model training
+The dataset contains 20 rows (20 generative designs) and the following key features:
 
-R² and MAE outputs
+Generative Design Inputs
+Feature	Description
+gd_safety_factor	Safety factor used in GD
+gd_min_thickness_mm	Min wall thickness constraint
+max_overhang_angle	Allowable overhang angle
+gd_unrestricted_flag	1 = unrestricted, 0 = manufacturing-aware
+max_von_mises_mpa	GD stress result
+Print Geometry
+Feature	Description
+mass_kg	Part mass
+volume_mm3	Part volume
+slenderness_ratio	Height / base footprint
+Printability Risk Factors
+Feature	Meaning
+small_base_flag	0 = stable, 1 = small unstable base
+thin_neck_flag	0 = very thin weak neck, 1 = thick strong neck
+complexity_flag	0 = simple, 1 = highly complex
 
-Feature importance rankings
+🎯 Target Variable
+print_success — a continuous score (0–1) estimating theoretical print success.
 
-Prediction examples
+🤖 6. Machine Learning Model
 
-📈 Example Prediction
+A Random Forest Regressor was used due to:
 
-Once trained, you can make predictions like:
+ Small dataset
+ Non-linear relationships
+ Ability to extract feature importance
 
-model.predict([[small_base, thin_neck, complexity, ...]])
+Performance
 
-🌟 Future Improvements
+R² Score: ~0.85
+MAE: ~0.09
 
-Add more generative designs to increase dataset size
+This means the model predicts printability with good accuracy, especially considering the dataset size.
 
-Export trained model as a .pkl file for future inference
+🔬 7. Feature Importance (Insights)
 
-Build a simple web UI tool (Streamlit)
+The model identified these as the strongest predictors:
 
-Add STLs + screenshot thumbnails
+Rank	Feature	Influence
+1	small_base_flag - Very strong (base stability is critical)
+2	slenderness_ratio - Tall slender parts are risky
+3	max_von_mises_mpa	- Stress distribution matters
+4	material_used_g	- Related to mass/dimensions
+5	volume_mm3 -	Size & geometry effects
+...	...	lower influence
 
-Integrate print simulation metrics (overhang percentage, minimum feature size)
+This aligns well with 3D-printing domain knowledge.
 
-👤 Author
+🖼️ 8. Visual Outputs
 
-Kaushik Teiledvara
-Mechanical Engineering — NUS
+Once you run the script, you will get:
+
+✔ feature_importance.png
+
+A ranked bar chart of which parameters most affect print success.
+
+✔ actual_vs_pred.png
+
+A scatter plot showing prediction vs. ground truth.
+
+📦 9. Reproducibility
+
+Anyone can reproduce the results by:
+
+git clone https://github.com/KaushikTeiledvara/printability.ml.git
+cd printability.ml
+conda env create -f environment.yml
+conda activate printability_env
+python src/model_training.py
+
+🏁 10. Conclusion
+
+This project successfully integrates:
+
+Autodesk Generative Design
+Bambu Studio slicing outputs
+Hand-labelled printability metrics
+Random Forest regression
+
+The model demonstrates strong predictive power and provides actionable insights into what geometric factors most strongly influence FDM print success.
+
+This workflow can be extended with:
+
+More data (physical print tests)
+Expanded GD design space
+Neural networks or gradient boosting models
