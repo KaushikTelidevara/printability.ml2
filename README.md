@@ -1,172 +1,72 @@
-🧩 Predicting 3D Printability Using Generative Design & Machine Learning
+# Predicting FDM printability of generative-design brackets
 
-This project integrates generative design, 3D printing slicing data, and machine learning to predict the printability of parts produced using Bambu Lab printers.
+A workflow that joins Fusion 360 generative design, Bambu Studio slicer data and a Random Forest model to score how printable each bracket design is, then picks a design that balances mass, stress and printability.
 
-The work forms part of a CAD/CAM assignment requiring:
+Solo term project for ME3261 Computer-Aided Design and Manufacturing, National University of Singapore (Aug–Nov 2025). Full write-up with figures and physical print results: **[kaushiktelidevara.com/printability](https://kaushiktelidevara.com/printability.html)**
 
- Data collection from Generative Design (Fusion 360)
- Slicer output from Bambu Studio
- Printability labelling
- A machine learning model predicting print success
- A well-documented GitHub repository containing code, data, environment files, and instructions
+## Summary
 
-🔍 1. Project Overview
+- **20 designs:** 19 Fusion 360 generative-design outcomes plus one hand-modelled baseline, all for the same bracket load case.
+- **Slicer data:** each design sliced in Bambu Studio for a Bambu Lab A1 Mini (default PLA settings, supports on) to record support mass and volume, print time and material used.
+- **Printability score:** each design scored 0.1–1.0 from three geometric risk flags (small base, thin neck, complexity) and its slicer preview.
+- **Model:** Random Forest regressor (scikit-learn, 200 trees) on 15 numeric features, 70/30 split. R² 0.85, MAE 0.095 on the 6 held-out designs.
+- **Selection:** a weighted index across mass, volume, peak stress and printability picked a 19 g design over both the 65 g baseline and the 9 g lightest design.
+- **Physical check:** four designs printed in PLA; outcomes matched their printability scores.
 
-3D printing success depends heavily on geometric features such as base size, slenderness, wall thickness, neck thickness, and overhang angles.
-To explore this relationship, we generated 20 variations of a bracket using Autodesk Fusion 360's Generative Design engine, varying:
+**Caveat:** the printability score is partly derived from the same risk flags that are model inputs, so the R² mostly reflects that scoring rule. The useful result is which measurable features carry the signal: base size, slenderness and peak stress, rather than the generative-design settings. A real predictor would need labels from repeated physical prints and flags measured automatically from geometry.
 
- Safety factor
- Minimum thickness
- Overhang constraints
- Unrestricted vs. manufacturing-aware settings
- Base geometry
- Neck thickness
- Complexity
+## Repository
 
-Each design was sliced in Bambu Studio, which produced additional print-related features:
+```
+printable.csv           Dataset: 20 designs x 15 numeric features + print_success
+printability.ipynb      Notebook with the full workflow
+src/model_training.py   Standalone script: trains the model, prints R² and MAE, saves plots
+environment.yml         Conda environment
+```
 
- Support volume
- Support mass
- Print time
- Material usage
+## Run it
 
-Finally, each design was assigned a print_success score (0–1) based on theoretical assessment of:
+With conda:
 
- Small base stability
- Thin neck failure risk
- Complexity & overhang difficulty
-
-This dataset was used to train a Random Forest regressor that predicts printability.
-
-📁 2. Repository Structure
-printability.ml/
-│
-├── printable.csv                 # Full dataset
-├── printability_model.ipynb      # Jupyter Notebook (full workflow)
-├── src/
-│   ├── model_training.py         # Clean standalone ML script
-│
-├── environment.yml               # Conda environment for reproducibility
-├── .gitignore                    # Ignore cache files / ipynb checkpoints
-└── README.md                     # Project documentation
-
-⚙️ 3. Installation
-✔ Option A — Using Conda (recommended)
-conda env create -f environment.yml
-conda activate printability_env
-
-✔ Option B — Manual Install
-pip install numpy pandas scikit-learn matplotlib jupyter seaborn
-
-🧪 4. Running the Machine Learning Model
-✔ Option A — Run the Notebook
-
-Open the Jupyter notebook:
-jupyter notebook
-
-Then open:
-printability_model.ipynb
-
-✔ Option B — Run the Script Directly
-python src/model_training.py
-
-This will:
-
- Train the Random Forest model
- Print model accuracy (R², MAE)
- Save visualizations:
-  feature_importance.png
-  actual_vs_pred.png
-
-📊 5. Dataset Description
-
-The dataset contains 20 rows (20 generative designs) and the following key features:
-
-Generative Design Inputs
-Feature	Description
-gd_safety_factor	Safety factor used in GD
-gd_min_thickness_mm	Min wall thickness constraint
-max_overhang_angle	Allowable overhang angle
-gd_unrestricted_flag	1 = unrestricted, 0 = manufacturing-aware
-max_von_mises_mpa	GD stress result
-Print Geometry
-Feature	Description
-mass_kg	Part mass
-volume_mm3	Part volume
-slenderness_ratio	Height / base footprint
-Printability Risk Factors
-Feature	Meaning
-small_base_flag	0 = stable, 1 = small unstable base
-thin_neck_flag	0 = very thin weak neck, 1 = thick strong neck
-complexity_flag	0 = simple, 1 = highly complex
-
-🎯 Target Variable
-print_success — a continuous score (0–1) estimating theoretical print success.
-
-🤖 6. Machine Learning Model
-
-A Random Forest Regressor was used due to:
-
- Small dataset
- Non-linear relationships
- Ability to extract feature importance
-
-Performance
-
-R² Score: ~0.85
-MAE: ~0.09
-
-This means the model predicts printability with good accuracy, especially considering the dataset size.
-
-🔬 7. Feature Importance (Insights)
-
-The model identified these as the strongest predictors:
-
-Rank	Feature	Influence
-1	small_base_flag - Very strong (base stability is critical)
-2	slenderness_ratio - Tall slender parts are risky
-3	max_von_mises_mpa	- Stress distribution matters
-4	material_used_g	- Related to mass/dimensions
-5	volume_mm3 -	Size & geometry effects
-...	...	lower influence
-
-This aligns well with 3D-printing domain knowledge.
-
-🖼️ 8. Visual Outputs
-
-Once you run the script, you will get:
-
-✔ feature_importance.png
-
-A ranked bar chart of which parameters most affect print success.
-
-✔ actual_vs_pred.png
-
-A scatter plot showing prediction vs. ground truth.
-
-📦 9. Reproducibility
-
-Anyone can reproduce the results by:
-
-git clone https://github.com/KaushikTeiledvara/printability.ml.git
-cd printability.ml
+```bash
+git clone https://github.com/KaushikTelidevara/printability.ml2.git
+cd printability.ml2
 conda env create -f environment.yml
 conda activate printability_env
 python src/model_training.py
+```
 
-🏁 10. Conclusion
+Or with pip:
 
-This project successfully integrates:
+```bash
+pip install numpy pandas scikit-learn matplotlib seaborn jupyter
+python src/model_training.py
+```
 
-Autodesk Generative Design
-Bambu Studio slicing outputs
-Hand-labelled printability metrics
-Random Forest regression
+The script prints R² and MAE and saves `feature_importance.png` and `actual_vs_pred.png`. To step through the analysis instead, run `jupyter notebook` and open `printability.ipynb`.
 
-The model demonstrates strong predictive power and provides actionable insights into what geometric factors most strongly influence FDM print success.
+## Dataset
 
-This workflow can be extended with:
+| Group | Columns |
+|---|---|
+| Generative-design inputs | `gd_safety_factor`, `gd_min_thickness_mm`, `max_overhang_angle`, `gd_unrestricted_flag` (1 = unrestricted, 0 = manufacturing-aware) |
+| Solver results | `max_von_mises_mpa`, `mass_kg`, `volume_mm3` |
+| Slicer results | `support_mass_g`, `support_volume_ml`, `estimated_print_time_min`, `material_used_g` |
+| Geometry and risk flags | `slenderness_ratio`, `small_base_flag`, `thin_neck_flag`, `complexity_flag` |
+| Target | `print_success`, a printability score from 0.1 to 1.0 |
 
-More data (physical print tests)
-Expanded GD design space
-Neural networks or gradient boosting models
+## Results
+
+Most important features: small-base flag (0.22), slenderness ratio (0.18) and peak von Mises stress (0.15). Safety factor, minimum thickness and the unrestricted flag rank lowest, so the final geometry matters more than the settings that produced it.
+
+Selection index, each term min–max normalised across the 20 designs:
+
+```
+0.30 × (1 − mass) + 0.20 × (1 − volume) + 0.25 × (1 − stress) + 0.25 × printability
+```
+
+Top design: `GD_Unrestricted_2_1` at 0.82 (19 g, 20 MPa, printability 0.75). The baseline scores 0.49 and the 9 g design 0.55.
+
+## Tools
+
+Fusion 360 generative design, Bambu Studio, Python (pandas, scikit-learn, matplotlib, seaborn), Jupyter.
